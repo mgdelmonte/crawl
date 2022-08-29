@@ -293,6 +293,25 @@ LUAFN(view_get_map)
         }
         lua_rawseti(ls, -2, 40000*(100+pc.x) + (100+pc.y));
     }
+}
+
+/*** Is there a timed portal on this level?
+ * @treturn boolean
+ * @function timed_portal
+ */
+LUAFN(timed_portal)
+{
+    for (rectangle_iterator ri(BOUNDARY_BORDER - 1); ri; ++ri)
+    {
+        const coord_def p = *ri;
+        if (feat_is_portal_entrance(env.grid(p)))
+        {
+            PLUARET(boolean, true);
+            return 1;
+        }
+
+    }
+    PLUARET(boolean, false);
     return 1;
 }
 
