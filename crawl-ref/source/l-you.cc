@@ -268,6 +268,16 @@ LUARET1(you_stealth_pips, number, stealth_pips())
  * @function willpower
  */
 LUARET1(you_willpower, number, player_willpower() / WL_PIP)
+/*** HPRegen
+ * @treturn float hp regen rate in points/turn
+ * @function hpregen
+ */
+LUARET1(you_hpregen, number, player_regen() / 100.0)
+/*** MPRegen
+ * @treturn float mana regen rate in points/turn
+ * @function mpregen
+ */
+LUARET1(you_mpregen, number, player_mp_regen() / 100.0)
 /*** Drowning resistance (rDrown).
  * @treturn boolean
  * @function res_drowning
@@ -1301,6 +1311,8 @@ static const struct luaL_reg you_clib[] =
     { "res_shock"   , you_res_shock },
     { "stealth_pips", you_stealth_pips },
     { "willpower"   , you_willpower },
+    { "hpregen"     , you_hpregen },
+    { "mpregen"     , you_mpregen },
     { "res_drowning", you_res_drowning },
     { "res_mutation", you_res_mutation },
     { "see_invisible", you_see_invisible },
