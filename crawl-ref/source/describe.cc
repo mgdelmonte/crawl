@@ -1238,28 +1238,33 @@ static string _describe_missile_brand(const item_def &item)
      return " + " + uppercase_first(brand_name);
 }
 
-static string _damage_rating(const item_def &item)
+string damage_rating(const item_def *item)
 {
-    if (is_unrandom_artefact(item, UNRAND_WOE))
-        return "\nDamage rating: your enemies will bleed and die for Makhleb.";
+    if (item && is_unrandom_artefact(*item, UNRAND_WOE))
+        return "your enemies will bleed and die for Makhleb.";
 
-    const bool thrown = item.base_type == OBJ_MISSILES;
+    const bool thrown = item && item->base_type == OBJ_MISSILES;
 
-    const int base_dam = property(item, PWPN_DAMAGE);
-    const int extra_base_dam = thrown ? throwing_base_damage_bonus(item) : 0;
-    const skill_type skill = _item_training_skill(item);
+    // Would be great to have a breakdown of UC damage by skill, form, claws etc.
+    const int base_dam = item ? property(*item, PWPN_DAMAGE)
+                              : unarmed_base_damage();
+    const int extra_base_dam = thrown ? throwing_base_damage_bonus(*item) :
+                                !item ? unarmed_base_damage_bonus(false) :
+                                        0;
+    const skill_type skill = item ? _item_training_skill(*item) : SK_UNARMED_COMBAT;
     const int stat_mult = stat_modify_damage(100, skill, true);
     const bool use_str = weapon_uses_strength(skill, true);
     const int skill_mult = apply_fighting_skill(apply_weapon_skill(100, skill, false), false, false);
 
     const int slaying = slaying_bonus(false);
-    int plusses = slaying;
-    if (item_ident(item, ISFLAG_KNOW_PLUSES))
-        plusses += item.plus;
+    const int ench = item && item_ident(*item, ISFLAG_KNOW_PLUSES) ? item->plus : 0;
+    const int plusses = slaying + ench;
 
     brand_type brand = SPWPN_NORMAL;
-    if (item_type_known(item) && !thrown)
-        brand = get_weapon_brand(item);
+    if (!item)
+        brand = get_form()->get_uc_brand();
+    else if (item_type_known(*item) && !thrown)
+        brand = get_weapon_brand(*item);
 
     const int DAM_RATE_SCALE = 100;
     int rating = (base_dam + extra_base_dam) * DAM_RATE_SCALE;
@@ -1269,8 +1274,11 @@ static string _damage_rating(const item_def &item)
     rating /= DAM_RATE_SCALE;
     rating += plusses;
 
-    const string base_dam_desc = thrown ? make_stringf("[%d + %d (Thrw)]", base_dam, extra_base_dam)
-                                        : make_stringf("%d", base_dam);
+    const string base_dam_desc = thrown ? make_stringf("[%d + %d (Thrw)]",
+                                                       base_dam, extra_base_dam) :
+                                  !item ? make_stringf("[%d + %d (UC)]",
+                                                       base_dam, extra_base_dam) :
+                                          make_stringf("%d", base_dam);
 
     string plusses_desc;
     if (plusses)
@@ -1278,18 +1286,18 @@ static string _damage_rating(const item_def &item)
         plusses_desc = make_stringf(" %s %d (%s)",
                                     plusses < 0 ? "-" : "+",
                                     abs(plusses),
-                                    slaying && item.plus ? "Ench + Slay" :
-                                               item.plus ? "Ench"
-                                                         : "Slay");
+                                    slaying && ench ? "Ench + Slay" :
+                                               ench ? "Ench"
+                                                    : "Slay");
     }
 
     const string brand_desc
-        = is_unrandom_artefact(item, UNRAND_DAMNATION) ? " + Damn"
-          : thrown ? _describe_missile_brand(item)
+        = item && is_unrandom_artefact(*item, UNRAND_DAMNATION) ? " + Damn"
+          : thrown ? _describe_missile_brand(*item)
                    : _describe_brand(brand);
 
     return make_stringf(
-        "\nDamage rating: %d (Base %s x %d%% (%s) x %d%% (Skill)%s)%s.",
+        "%d (Base %s x %d%% (%s) x %d%% (Skill)%s)%s.",
         rating,
         base_dam_desc.c_str(),
         stat_mult,
@@ -1386,7 +1394,7 @@ static void _append_weapon_stats(string &description, const item_def &item)
     if (want_player_stats)
     {
         description += _desc_attack_delay(item);
-        description += _damage_rating(item);
+        description += "\nDamage rating: " + damage_rating(&item);
     }
 }
 
@@ -1766,7 +1774,7 @@ static string _describe_ammo(const item_def &item)
             _append_skill_target_desc(description, SK_THROWING, target_skill);
 
         if (!is_useless_item(item))
-            description += _damage_rating(item);
+            description += "\nDamage rating: " + damage_rating(&item);
     }
 
     if (ammo_always_destroyed(item))
@@ -2068,6 +2076,7 @@ static string _describe_armour(const item_def &item, bool verbose, bool monster)
     if (crawl_state.need_save
         && verbose
         && aevp
+        && !is_shield(item)
         && _you_are_wearing_item(item)
         && is_slowed_by_armour(you.weapon()))
     {
@@ -3404,6 +3413,9 @@ command_type describe_item_popup(const item_def &item,
     if (!item.defined())
         return CMD_NO_CMD;
 
+    // Dead players use no items.
+    do_actions = do_actions && !(you.pending_revival || crawl_state.updating_scores);
+
     string name = item.name(DESC_INVENTORY_EQUIP) + ".";
     if (!in_inventory(item))
         name = uppercase_first(name);
@@ -3569,12 +3581,9 @@ command_type describe_item_popup(const item_def &item,
  *  @return whether to remain in the outer mode (inventory, `xv`) after the popup.
  *
  */
-bool describe_item(item_def &item, function<void (string&)> fixup_desc)
+bool describe_item(item_def &item, function<void (string&)> fixup_desc, bool do_actions)
 {
-    // Dead players use no items.
-    const bool do_actions = !(you.pending_revival || crawl_state.updating_scores);
     command_type action = describe_item_popup(item, fixup_desc, do_actions);
-
     return _do_action(item, action);
 }
 
@@ -5039,6 +5048,14 @@ static string _monster_stat_description(const monster_info& mi, bool mark_spells
                << conjugate_verb("are", plural)
                << " immune to blinding.\n";
     }
+
+    if (mons_class_flag(mi.type, M_INSUBSTANTIAL))
+    {
+        result << uppercase_first(pronoun) << " "
+               << conjugate_verb("are", plural)
+               << " insubstantial and immune to ensnarement.\n";
+    }
+
     // XXX: could mention "immune to dazzling" here, but that's spammy, since
     // it's true of such a huge number of monsters. (undead, statues, plants).
     // Might be better to have some place where players can see holiness &
