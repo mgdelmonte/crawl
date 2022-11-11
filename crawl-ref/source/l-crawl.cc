@@ -1526,6 +1526,7 @@ static const struct luaL_reg crawl_clib[] =
     { "endgame",            crawl_endgame },
     { "tutorial_msg",       crawl_tutorial_msg },
     { "dump_char",          crawl_dump_char },
+    { "millis",             _crawl_millis },
 #ifdef WIZARD
     { "call_dlua",          crawl_call_dlua },
 #endif
@@ -1796,7 +1797,6 @@ static const struct luaL_reg crawl_dlib[] =
 { "redraw_view", _crawl_redraw_view },
 { "redraw_stats", _crawl_redraw_stats },
 { "god_speaks", _crawl_god_speaks },
-{ "millis", _crawl_millis },
 { "make_name", crawl_make_name },
 { "set_max_runes", _crawl_set_max_runes },
 { "tutorial_skill",  crawl_tutorial_skill },
