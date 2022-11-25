@@ -349,13 +349,10 @@ bool melee_attack::handle_phase_dodged()
         if (defender->is_player() && player_equip_unrand(UNRAND_STARLIGHT))
             do_starlight();
 
-        if (defender->is_player())
-        {
-            maybe_riposte();
-            // Retaliations can kill!
-            if (!attacker->alive())
-                return false;
-        }
+        maybe_riposte();
+        // Retaliations can kill!
+        if (!attacker->alive())
+            return false;
     }
 
     return true;
@@ -363,9 +360,13 @@ bool melee_attack::handle_phase_dodged()
 
 void melee_attack::maybe_riposte()
 {
-    const bool using_fencers = player_equip_unrand(UNRAND_FENCERS)
-        && (!defender->weapon()
-            || is_melee_weapon(*defender->weapon()));
+    // only riposte via fencer's gloves, which (I take it from this code)
+    // monsters can't use
+    const bool using_fencers =
+                defender->is_player()
+                    && player_equip_unrand(UNRAND_FENCERS)
+                    && (!defender->weapon()
+                        || is_melee_weapon(*defender->weapon()));
     if (using_fencers && one_chance_in(3) && !is_riposte) // no ping-pong!
         riposte();
 }
@@ -1320,6 +1321,8 @@ bool melee_attack::player_aux_apply(unarmed_attack_type atk)
             aux_damage = 0;
         else
             aux_damage = apply_defender_ac(aux_damage);
+
+        aux_damage = player_apply_postac_multipliers(aux_damage);
     }
 
     aux_damage = inflict_damage(aux_damage, BEAM_MISSILE);
@@ -1458,11 +1461,6 @@ int melee_attack::player_apply_final_multipliers(int damage, bool aux)
     if (charge_pow > 0 && defender->res_elec() <= 0)
         damage += div_rand_round(damage * charge_pow, 150);
 
-    // not additive, statues are supposed to be bad with tiny toothpicks but
-    // deal crushing blows with big weapons
-    if (you.form == transformation::statue)
-        damage = div_rand_round(damage * 3, 2);
-
     // Can't affect much of anything as a shadow.
     if (you.form == transformation::shadow)
         damage = div_rand_round(damage, 2);
@@ -1472,6 +1470,16 @@ int melee_attack::player_apply_final_multipliers(int damage, bool aux)
 
     if (you.duration[DUR_CONFUSING_TOUCH] && !aux)
         return 0;
+
+    return damage;
+}
+
+int melee_attack::player_apply_postac_multipliers(int damage)
+{
+    // Statue form's damage modifier is designed to exactly compensate for
+    // the slowed speed; therefore, it needs to apply after AC.
+    if (you.form == transformation::statue)
+        damage = div_rand_round(damage * 3, 2);
 
     return damage;
 }
@@ -3273,6 +3281,7 @@ void melee_attack::do_minotaur_retaliation()
     dmg = player_apply_slaying_bonuses(dmg, true);
     dmg = player_apply_final_multipliers(dmg, true);
     int hurt = attacker->apply_ac(dmg);
+    hurt = player_apply_postac_multipliers(dmg);
 
     mpr("You furiously retaliate!");
     dprf(DIAG_COMBAT, "Retaliation: dmg = %d hurt = %d", dmg, hurt);
@@ -3309,11 +3318,8 @@ void melee_attack::do_starlight()
 
 
 /**
- * Launch a long blade counterattack against the attacker. No sanity checks;
+ * Launch a counterattack against the attacker. No sanity checks;
  * caller beware!
- *
- * XXX: might be wrong for deep elf blademasters with a long blade in only
- * one hand
  */
 void melee_attack::riposte()
 {

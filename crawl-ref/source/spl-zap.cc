@@ -103,7 +103,7 @@ static pair<spell_type, zap_type> _spl_zaps[] =
     { SPELL_MIASMA_BREATH, ZAP_MIASMA_BREATH },
     { SPELL_PETRIFYING_CLOUD, ZAP_PETRIFYING_CLOUD },
     { SPELL_GHOSTLY_FIREBALL, ZAP_GHOSTLY_FIREBALL },
-    { SPELL_FLASH_FREEZE, ZAP_FLASH_FREEZE },
+    { SPELL_FLASH_FREEZE, ZAP_ICY_FLASH_FREEZE },
     { SPELL_CREEPING_FROST, ZAP_FLASH_FREEZE },
     { SPELL_PYROCLASTIC_SURGE, ZAP_BOLT_OF_FIRE },
     { SPELL_SPIT_LAVA, ZAP_SPIT_LAVA },
@@ -132,14 +132,16 @@ static pair<spell_type, zap_type> _spl_zaps[] =
     { SPELL_SEARING_BREATH, ZAP_BREATHE_FIRE },
     { SPELL_ICEBLAST, ZAP_ICEBLAST },
     { SPELL_ACID_SPLASH, ZAP_BREATHE_ACID },
-    { SPELL_BORGNJORS_VILE_CLUTCH, ZAP_VILE_CLUTCH},
+    { SPELL_BORGNJORS_VILE_CLUTCH, ZAP_VILE_CLUTCH },
     { SPELL_FOXFIRE, ZAP_FOXFIRE },
     { SPELL_MARSHLIGHT, ZAP_FOXFIRE },
     { SPELL_HURL_SLUDGE, ZAP_HURL_SLUDGE },
+    { SPELL_POISONOUS_CLOUD, ZAP_BREATHE_POISON },
+    { SPELL_MEPHITIC_CLOUD, ZAP_BREATHE_MEPHITIC },
 };
 
 // Some player abilities are internally zaps but don't go through
-// your_spels
+// your_spells
 static pair<ability_type, zap_type> _abil_zaps[] =
 {
     { ABIL_SPIT_POISON, ZAP_SPIT_POISON },
@@ -183,8 +185,6 @@ int spell_zap_power(spell_type spell, int pow)
 {
     switch (spell)
     {
-    case SPELL_HIBERNATION:
-        return stepdown_value(pow * 9 / 10, 5, 35, 45, 50);
     default:
         return pow;
     }

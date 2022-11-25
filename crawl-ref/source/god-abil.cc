@@ -1848,23 +1848,6 @@ bool fedhas_passthrough(const monster_info* target)
                || target->attitude != ATT_HOSTILE);
 }
 
-static bool _lugonu_warp_monster(monster& mon)
-{
-    // XXX: should this ignore mon.no_tele(), as with the player?
-    if (mon.wont_attack() || mon.no_tele() || coinflip())
-        return false;
-
-    mon.blink();
-    return true;
-}
-
-void lugonu_bend_space()
-{
-    mpr("Space bends violently around you!");
-    uncontrolled_blink(true);
-    apply_monsters_around_square(_lugonu_warp_monster, you.pos());
-}
-
 void cheibriados_time_bend(int pow)
 {
     mpr("The flow of time bends around you.");
@@ -3280,14 +3263,12 @@ spret qazlal_upheaval(coord_def target, bool quiet, bool fail, dist *player_targ
     for (coord_def pos : affected)
         beam.draw(pos, false);
 
+    // When `quiet`, refresh the view after each complete draw pass. Add a bit
+    // of delay even for this, otherwise it goes by too quickly.
     if (quiet)
     {
-        // When `quiet`, refresh the view after each complete draw pass.
-        // why this call dance to refresh? I just copied it from bolt::draw
-        viewwindow(false);
-        update_screen();
-        scaled_delay(50); // add some delay per upheaval draw, otherwise it all
-                          // goes by too fast.
+        if (!Options.reduce_animations)
+            animation_delay(50, true);
     }
     else
     {
@@ -3480,7 +3461,9 @@ spret qazlal_disaster_area(bool fail)
         targets.erase(targets.begin() + which);
         weights.erase(weights.begin() + which);
     }
-    scaled_delay(200);
+    // possibly this delay should be slightly increased if reduce_animations is
+    // true?
+    animation_delay(200, Options.reduce_animations);
 
     return spret::success;
 }
@@ -4029,7 +4012,7 @@ static void _ru_expire_sacrifices()
         you.props[key].get_vector().clear();
     }
 
-    // Clear out stored sacrfiice values.
+    // Clear out stored sacrifice values.
     for (int i = 0; i < NUM_ABILITIES; ++i)
         you.sacrifice_piety[i] = 0;
 }
@@ -4553,7 +4536,7 @@ bool ru_reject_sacrifices(bool forced_rejection)
         return false;
     }
 
-    ru_reset_sacrifice_timer(false, true);
+    ru_reset_sacrifice_timer(false, forced_rejection);
     _ru_expire_sacrifices();
     simple_god_message(" will take longer to evaluate your readiness.");
     return true;
@@ -4607,7 +4590,11 @@ void ru_reset_sacrifice_timer(bool clear_timer, bool faith_penalty)
         }
     }
 
-    delay = div_rand_round((delay + added_delay) * (3 - you.faith()), 3);
+    // No faith reduction if this is due to abandoning Ru.
+    if (!you_worship(GOD_RU))
+        delay += added_delay;
+    else
+        delay = div_rand_round((delay + added_delay) * (3 - you.faith()), 3);
     if (crawl_state.game_is_sprint())
         delay /= SPRINT_MULTIPLIER;
 

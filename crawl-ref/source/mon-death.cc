@@ -1371,7 +1371,7 @@ static bool _animate_dead_reap(monster &mons)
     if (!you.duration[DUR_ANIMATE_DEAD])
         return false;
     const int pow = you.props[ANIMATE_DEAD_POWER_KEY].get_int();
-    if (!x_chance_in_y(150 + pow/2, 200))
+    if (!x_chance_in_y(150 + div_rand_round(pow, 2), 200))
         return false;
 
     _make_derived_undead(&mons, false, MONS_ZOMBIE, BEH_FRIENDLY,
@@ -1402,7 +1402,8 @@ static bool _apply_necromancy(monster &mons, bool quiet, bool exploded,
                               bool in_los, bool corpseworthy)
 {
     // This is a hostile effect, and monsters are dirty cheaters. Sorry!
-    if (mons.has_ench(ENCH_BOUND_SOUL))
+    if (mons.has_ench(ENCH_BOUND_SOUL)
+        && !have_passive(passive_t::goldify_corpses))
     {
         _make_derived_undead(&mons, quiet, MONS_SIMULACRUM,
                              SAME_ATTITUDE(&mons),

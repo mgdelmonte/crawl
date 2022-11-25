@@ -378,9 +378,9 @@ static vector<ability_def> &_get_ability_list()
 
         // Kikubaaqudgha
         { ABIL_KIKU_UNEARTH_WRETCHES, "Unearth Wretches",
-            3, 0, 4, -1, {fail_basis::invo, 40, 5, 20}, abflag::none },
+            3, 0, 5, -1, {fail_basis::invo, 40, 5, 20}, abflag::none },
         { ABIL_KIKU_TORMENT, "Torment",
-            4, 0, 8, -1, {fail_basis::invo, 60, 5, 20}, abflag::none },
+            4, 0, 6, -1, {fail_basis::invo, 60, 5, 20}, abflag::none },
         { ABIL_KIKU_GIFT_CAPSTONE_SPELLS, "Receive Forbidden Knowledge",
             0, 0, 0, -1, {fail_basis::invo}, abflag::none },
         { ABIL_KIKU_BLESS_WEAPON, "Brand Weapon With Pain",
@@ -451,9 +451,6 @@ static vector<ability_def> &_get_ability_list()
         // Lugonu
         { ABIL_LUGONU_ABYSS_EXIT, "Depart the Abyss",
             1, 0, 10, -1, {fail_basis::invo, 30, 6, 20}, abflag::none },
-        { ABIL_LUGONU_BEND_SPACE, "Bend Space",
-            1, scaling_cost::fixed(2), 0, -1, {fail_basis::invo, 40, 5, 20},
-            abflag::none },
         { ABIL_LUGONU_BANISH, "Banish",
             4, 0, generic_cost::range(3, 4), LOS_MAX_RANGE,
             {fail_basis::invo, 85, 7, 20}, abflag::none },
@@ -1481,8 +1478,7 @@ static bool _check_ability_possible(const ability_def& abil, bool quiet = false)
     // dangerous.)
     if (abil.ability == ABIL_END_TRANSFORMATION)
     {
-        if (feat_dangerous_for_form(transformation::none, env.grid(you.pos()))
-            && !you.duration[DUR_FLIGHT])
+        if (feat_dangerous_for_form(transformation::none, env.grid(you.pos())))
         {
             if (!quiet)
             {
@@ -2083,8 +2079,6 @@ unique_ptr<targeter> find_ability_targeter(ability_type ability)
         return make_unique<targeter_multiposition>(&you, find_chaos_targets(true));
     case ABIL_ZIN_RECITE:
         return make_unique<targeter_multiposition>(&you, find_recite_targets());
-    case ABIL_LUGONU_BEND_SPACE:
-        return make_unique<targeter_multiposition>(&you, find_blink_targets());
     case ABIL_FEDHAS_WALL_OF_BRIARS:
         return make_unique<targeter_multiposition>(&you, find_briar_spaces(true), AFF_YES);
     case ABIL_QAZLAL_ELEMENTAL_FORCE:
@@ -3008,13 +3002,6 @@ static spret _do_ability(const ability_def& abil, bool fail, dist *target,
             return spret::abort;
         fail_check();
         down_stairs(DNGN_EXIT_ABYSS);
-        break;
-
-    case ABIL_LUGONU_BEND_SPACE:
-        if (cancel_harmful_move(false))
-            return spret::abort;
-        fail_check();
-        lugonu_bend_space();
         break;
 
     case ABIL_LUGONU_BANISH:
