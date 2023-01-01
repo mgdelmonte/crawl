@@ -296,6 +296,27 @@ LUAFN(view_get_map)
     return 1;
 }
 
+/*** Is there a timed portal on this level?
+ * @treturn boolean
+ * @function timed_portal
+ */
+LUAFN(timed_portal)
+{
+    for (rectangle_iterator ri(BOUNDARY_BORDER - 1); ri; ++ri)
+    {
+        const coord_def p = *ri;
+        dungeon_feature_type feat = env.grid(p);
+        if (feat_is_portal_entrance(feat) && feat != DNGN_ENTER_TROVE && feat != DNGN_ENTER_ZIGGURAT)
+        {
+            PLUARET(boolean, true);
+            return 1;
+        }
+
+    }
+    PLUARET(boolean, false);
+    return 1;
+}
+
 LUAFN(view_update_monsters)
 {
     ASSERT_DLUA;
@@ -314,6 +335,7 @@ static const struct luaL_reg view_lib[] =
     { "invisible_monster", view_invisible_monster },
     { "cell_see_cell", view_cell_see_cell },
     { "get_map", view_get_map },
+    { "timed_portal", timed_portal },
 
     { "update_monsters", view_update_monsters },
 
