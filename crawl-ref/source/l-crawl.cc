@@ -1469,6 +1469,32 @@ LUAFN(crawl_hints_type)
     return 1;
 }
 
+/*** Current milliseconds.
+ * Gives the current milliseconds of the time of day.
+ * @within dlua
+ * @treturn int
+ * @function millis
+ */
+LUAFN(_crawl_millis)
+{
+#ifdef TARGET_OS_WINDOWS
+    // MSVC has no gettimeofday().
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    uint64_t tt = ft.dwHighDateTime;
+    tt <<= 32;
+    tt |= ft.dwLowDateTime;
+    tt /= 10000;
+    tt -= 11644473600000ULL;
+    lua_pushnumber(ls, tt);
+#else
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+    lua_pushnumber(ls, tv.tv_sec * 1000 + tv.tv_usec / 1000);
+#endif
+    return 1;
+}
+
 static const struct luaL_reg crawl_clib[] =
 {
     { "mpr",                crawl_mpr },
@@ -1536,6 +1562,7 @@ static const struct luaL_reg crawl_clib[] =
     { "endgame",            crawl_endgame },
     { "tutorial_msg",       crawl_tutorial_msg },
     { "dump_char",          crawl_dump_char },
+    { "millis", _crawl_millis },
 #ifdef WIZARD
     { "call_dlua",          crawl_call_dlua },
 #endif
@@ -1627,31 +1654,6 @@ LUAFN(_crawl_redraw_stats)
     return 0;
 }
 
-/*** Current milliseconds.
- * Gives the current milliseconds of the time of day.
- * @within dlua
- * @treturn int
- * @function millis
- */
-LUAFN(_crawl_millis)
-{
-#ifdef TARGET_OS_WINDOWS
-    // MSVC has no gettimeofday().
-    FILETIME ft;
-    GetSystemTimeAsFileTime(&ft);
-    uint64_t tt = ft.dwHighDateTime;
-    tt <<= 32;
-    tt |= ft.dwLowDateTime;
-    tt /= 10000;
-    tt -= 11644473600000ULL;
-    lua_pushnumber(ls, tt);
-#else
-    struct timeval tv;
-    gettimeofday(&tv, nullptr);
-    lua_pushnumber(ls, tv.tv_sec * 1000 + tv.tv_usec / 1000);
-#endif
-    return 1;
-}
 static string _crawl_make_name(lua_State */*ls*/)
 {
     // A quick wrapper around itemname:make_name.
