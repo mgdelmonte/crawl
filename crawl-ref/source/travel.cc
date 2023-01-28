@@ -683,6 +683,7 @@ static void _start_running()
 void stop_running(bool clear_delays)
 {
     you.running.stop(clear_delays);
+    macro_clear_buffers();
 }
 
 static bool _is_valid_explore_target(const coord_def& where)
