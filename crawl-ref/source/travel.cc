@@ -683,7 +683,10 @@ static void _start_running()
 void stop_running(bool clear_delays)
 {
     you.running.stop(clear_delays);
+    // need to clear buffers but don't want to change the show_more_prompt state
+    bool more = crawl_state.show_more_prompt;
     macro_clear_buffers();
+    crawl_state.show_more_prompt = more;
 }
 
 static bool _is_valid_explore_target(const coord_def& where)
